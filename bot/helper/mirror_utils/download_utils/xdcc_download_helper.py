@@ -35,8 +35,7 @@ def genpacks(packstr):
             s = r[0]
             e = r[0]
         # raise error here
-        for k in range(s, e + 1):
-            yield k
+        yield from range(s, e + 1)
 
 
 def random_nickname(word="lolikiller"):
@@ -110,11 +109,11 @@ class XDCCDownload(irc.client.SimpleIRCClient):
     def name(self):
         if not self.__name:
             return self.gid
-        if self.pack_length != 1:
-            fullname = f"{self.__name} [{self.__current_pack}/{self.pack_length}]"
-        else:
-            fullname = f"{self.__name}"
-        return fullname
+        return (
+            f"{self.__name} [{self.__current_pack}/{self.pack_length}]"
+            if self.pack_length != 1
+            else f"{self.__name}"
+        )
 
     @property
     def download_speed(self):
@@ -199,25 +198,26 @@ class XDCCDownload(irc.client.SimpleIRCClient):
 
 
     def on_privnotice(self, connection, event):
-        if event.arguments[0] == "** You already requested that pack":
-            wait_time = 60
-            while wait_time != 0:
-                self.__status = MirrorStatus.STATUS_RETRYING
-                self.__status_text = f" in {wait_time}s"
-                self.update_download_status()
-                if self.end_loop:
-                    break
-                self.reactor.process_once(0.2)
-                sleep(1)
-                wait_time = wait_time - 1
+        if event.arguments[0] != "** You already requested that pack":
+            return
+        wait_time = 60
+        while wait_time != 0:
+            self.__status = MirrorStatus.STATUS_RETRYING
+            self.__status_text = f" in {wait_time}s"
+            self.update_download_status()
             if self.end_loop:
-                self.connection.quit()
-            else:
-                self.connection.ctcp(
-                    "xdcc", self.args.bot, "send %d" % self.last_pack
-                )
-                self.__status = MirrorStatus.STATUS_DOWNLOADING
-                self.__status_text = None
+                break
+            self.reactor.process_once(0.2)
+            sleep(1)
+            wait_time -= 1
+        if self.end_loop:
+            self.connection.quit()
+        else:
+            self.connection.ctcp(
+                "xdcc", self.args.bot, "send %d" % self.last_pack
+            )
+            self.__status = MirrorStatus.STATUS_DOWNLOADING
+            self.__status_text = None
 
 
     def on_dccmsg(self, connection, event):

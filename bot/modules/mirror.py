@@ -94,19 +94,17 @@ class MirrorListener(listeners.MirrorListeners):
             except NotSupportedExtractionArchive:
                 LOGGER.info("Not any valid archive, uploading file as it is.")
                 path = f'{DOWNLOAD_DIR}{self.uid}/{name}'
+        elif self.root:
+            path = f'{DOWNLOAD_DIR}{self.uid}/{self.root}'
         else:
-            if self.root:
-                path = f'{DOWNLOAD_DIR}{self.uid}/{self.root}'
-            else:
-                path = f'{DOWNLOAD_DIR}{self.uid}/{name}'
+            path = f'{DOWNLOAD_DIR}{self.uid}/{name}'
         up_name = pathlib.PurePath(path).name
         LOGGER.info(f"Upload Name : {up_name}")
         drive = gdriveTools.GoogleDriveHelper(up_name, self)
         if self.root:
             size = fs_utils.get_path_size(path)
-        else:
-            if size == 0:
-                size = fs_utils.get_path_size(m_path)
+        elif size == 0:
+            size = fs_utils.get_path_size(m_path)
         upload_status = UploadStatus(drive, size, self)
         with download_dict_lock:
             download_dict[self.uid] = upload_status
@@ -126,7 +124,6 @@ class MirrorListener(listeners.MirrorListeners):
                 LOGGER.info(str(download_dict))
             except Exception as e:
                 LOGGER.error(str(e))
-                pass
             count = len(download_dict)
         if self.message.from_user.username:
             uname = f"@{self.message.from_user.username}"
@@ -201,37 +198,31 @@ def _mirror(bot, update, isTar=False, extract=False):
     if options:
         options = options.rsplit(",name=", 1)
         try:
-            aria_options.update({"out": options[1]})
+            aria_options["out"] = options[1]
         except IndexError:
             pass
         left_options = options[0]
         options = left_options.split(",")
         for option in options:
             option_dict = option.split("=", 1)
-            aria_options.update({option_dict[0]:option_dict[1]})
+            aria_options[option_dict[0]] = option_dict[1]
 
     reply_to = update.message.reply_to_message
     if reply_to is not None:
-        file = None
         tag = reply_to.from_user.username
         media_array = [reply_to.document, reply_to.video, reply_to.audio]
-        for i in media_array:
-            if i is not None:
-                file = i
-                break
-
-        if len(link) == 0:
-            if file is not None:
-                if file.mime_type != "application/x-bittorrent":
-                    listener = MirrorListener(bot, update, isTar, tag, extract)
-                    tg_downloader = TelegramDownloadHelper(listener)
-                    tg_downloader.add_download(reply_to, f'{DOWNLOAD_DIR}{listener.uid}/')
-                    sendStatusMessage(update, bot)
-                    if len(Interval) == 0:
-                        Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
-                    return
-                else:
-                    link = file.get_file().file_path
+        file = next((i for i in media_array if i is not None), None)
+        if len(link) == 0 and file is not None:
+            if file.mime_type != "application/x-bittorrent":
+                listener = MirrorListener(bot, update, isTar, tag, extract)
+                tg_downloader = TelegramDownloadHelper(listener)
+                tg_downloader.add_download(reply_to, f'{DOWNLOAD_DIR}{listener.uid}/')
+                sendStatusMessage(update, bot)
+                if len(Interval) == 0:
+                    Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
+                return
+            else:
+                link = file.get_file().file_path
     else:
         tag = None
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
@@ -241,7 +232,7 @@ def _mirror(bot, update, isTar=False, extract=False):
     try:
         link, cookies = direct_link_generator(link)
         if cookies:
-            aria_options.update({"header": f"Cookie:{cookies}"})
+            aria_options["header"] = f"Cookie:{cookies}"
     except DirectDownloadLinkException as e:
         LOGGER.info(f'{link}: {e}')
     listener = MirrorListener(bot, update, isTar, tag, extract)

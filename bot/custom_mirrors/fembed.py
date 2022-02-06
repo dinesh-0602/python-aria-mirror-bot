@@ -33,7 +33,7 @@ def fembed(update, context):
     data = BeautifulSoup(r.text, 'html.parser')
     try:
         name = data.find_all('title')[0].text.split(" - Free download")[0]
-        aria_options.update({"out": name})
+        aria_options["out"] = name
     except IndexError:
         pass
     fembed_id = fembed_link.split("f/")[1]

@@ -21,16 +21,25 @@ def get_onedrive_dl_links(url, folder=""):
     dl_links = []
     for each_data in data:
         new_base_folder = unquote(folder + "/" + each_data['name'])
-        new_url = url + "/" + each_data['name']
+        new_url = f'{url}/' + each_data['name']
         if each_data['@type'] == 'folder':
-            dl_links = dl_links + get_onedrive_dl_links(new_url, new_base_folder)
+            dl_links += get_onedrive_dl_links(new_url, new_base_folder)
         elif each_data['@type'] == 'file':
-            dl_links.append({
-                "folder_path": unquote(folder).encode('ascii', errors='ignore').decode(),
-                "file_path": unquote(folder + "/" + each_data['name']).encode('ascii', errors='ignore').decode(),
-                "file_name": unquote(each_data['name']).encode('ascii', errors='ignore').decode(),
-                "url": new_url
-            })
+            dl_links.append(
+                {
+                    "folder_path": unquote(folder)
+                    .encode('ascii', errors='ignore')
+                    .decode(),
+                    "file_path": unquote(f'{folder}/{each_data["name"]}')
+                    .encode('ascii', errors='ignore')
+                    .decode(),
+                    "file_name": unquote(each_data['name'])
+                    .encode('ascii', errors='ignore')
+                    .decode(),
+                    "url": new_url,
+                }
+            )
+
 
     return dl_links
 

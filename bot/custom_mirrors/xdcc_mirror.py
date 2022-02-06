@@ -41,9 +41,9 @@ def xdcc_download(update, context):
     for each_info in server_channel:
         info = each_info.split("=")
         if info[0].lower() == "channel":
-            args.update({info[0]: info[1]})
+            args[info[0]] = info[1]
         else:
-            server_info.update({info[0]: info[1]})
+            server_info[info[0]] = info[1]
     tag = None
 
     pattern = r".* (.*?) xdcc (send|batch) (.*)"

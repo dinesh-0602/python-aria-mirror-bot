@@ -16,7 +16,7 @@ class AriaQueue:
         self.name = ""
 
         self.base_path = ""
-        self.queue = (link for link in links)
+        self.queue = iter(links)
         self.queue_length = len(links)
         self.current_download = 0
 
@@ -41,8 +41,7 @@ class AriaDownloadHelper(DownloadHelper):
     @new_thread
     def __onDownloadStarted(self, api, gid):
         LOGGER.info(f"onDownloadStart: {gid}")
-        dl = getDownloadByGid(gid)
-        if dl:
+        if dl := getDownloadByGid(gid):
             self.queue_dict[dl.uid()].name = api.get_download(gid).name
         update_all_messages()
 
@@ -82,8 +81,7 @@ class AriaDownloadHelper(DownloadHelper):
     @new_thread
     def __onDownloadStopped(self, api, gid):
         LOGGER.info(f"onDownloadStop: {gid}")
-        dl = getDownloadByGid(gid)
-        if dl:
+        if dl := getDownloadByGid(gid):
             dl.getListener().onDownloadError('Download stopped by user!')
 
 
